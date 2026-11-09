@@ -1,0 +1,19 @@
+{
+  "name": "invoice-picker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Odabir računa do limita: picks invoices from Excel reports whose total is closest to a target (at most, closest or at least), with several ranked options and batch splitting.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test",
+    "start": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}

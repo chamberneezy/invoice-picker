@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Odabir računa do limita</title>
+  <meta name="description" content="Učitajte Excel izvještaj računa i pronađite kombinacije računa čiji je zbroj najbliži zadanom iznosu.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d5d8a'/%3E%3Cpath d='M9 8h14M9 13h14M9 18h8' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M19 22l2.5 2.5L26 20' stroke='%238fd6a6' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- SheetJS 0.20.3 (vendored from cdn.sheetjs.com) reads and writes .xlsx/.xls/.csv in the browser -->
+  <script src="js/vendor/xlsx.full.min.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Odabir računa do limita</h1>
+    <p class="lede">Učitajte izvještaj iz Excela, upišite iznos i alat pronalazi kombinacije računa čiji je zbroj najbliži tom iznosu. Datoteke se obrađuju samo u vašem pregledniku i nigdje se ne šalju.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="h-data">
+    <h2 id="h-data" class="step"><span>1</span>Podaci</h2>
+    <div class="field">
+      <label class="drop" id="drop" for="file">
+        <b>Odaberi datoteke</b><span>ili ih povucite ovdje (.xlsx, .xls, .csv). Može ih biti više.</span>
+      </label>
+      <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt" multiple hidden>
+    </div>
+    <ul class="files" id="files" hidden></ul>
+    <div class="cols" id="cols" hidden>
+      <div class="field" id="sheetField" hidden><label for="sheet">List</label><select id="sheet"></select></div>
+      <div class="field"><label for="colId">Broj računa</label><select id="colId"></select></div>
+      <div class="field"><label for="colAmt">Iznos</label><select id="colAmt"></select></div>
+      <div class="field"><label for="colDate">Datum</label><select id="colDate"></select></div>
+    </div>
+    <p class="note" id="msg">Nemate datoteku pri ruci? <button type="button" class="link" id="loadSample">Učitaj primjer</button></p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-goal">
+    <h2 id="h-goal" class="step"><span>2</span>Cilj</h2>
+    <div class="goal">
+      <div class="field">
+        <label for="limit">Iznos</label>
+        <div class="limit-box"><input type="text" id="limit" inputmode="decimal" value="1000" autocomplete="off"><span class="cur">EUR</span></div>
+      </div>
+      <fieldset class="field seg-field">
+        <legend class="label">Zbroj računa mora biti</legend>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="mode" value="under" checked><span>do iznosa</span></label>
+          <label><input type="radio" name="mode" value="closest"><span>najbliži iznosu</span></label>
+          <label><input type="radio" name="mode" value="over"><span>barem iznos</span></label>
+        </div>
+      </fieldset>
+    </div>
+    <details class="more">
+      <summary>Više postavki</summary>
+      <div class="cols">
+        <div class="field">
+          <label for="prefer">Kad više kombinacija daje isti zbroj</label>
+          <select id="prefer">
+            <option value="order">uzmi starije račune</option>
+            <option value="fewest">uzmi što manje računa</option>
+            <option value="most">uzmi što više računa</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="count">Broj prijedloga</label>
+          <select id="count">
+            <option value="1">1</option>
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+      </div>
+    </details>
+    <div class="go">
+      <button id="run" type="button" disabled>Izračunaj</button>
+      <button id="batches" type="button" class="ghost" disabled title="Podijeli sve uključene račune u uzastopne skupine, svaku što bliže iznosu, a da ga ne prelazi">Podijeli sve u serije</button>
+      <button id="cancel" type="button" class="ghost" hidden>Prekini</button>
+      <span class="busy" id="busy" hidden>Računam…</span>
+    </div>
+  </section>
+
+  <section class="summary" aria-live="polite">
+    <div class="stat main"><span class="label">Zbroj odabranih</span><span class="v" id="sSum">–</span></div>
+    <div class="stat"><span class="label" id="sDiffLabel">Do limita ostaje</span><span class="v" id="sDiff">–</span></div>
+    <div class="stat"><span class="label">Odabrano računa</span><span class="v" id="sCount">–</span></div>
+    <div class="stat"><span class="label">Uključeno u izračun</span><span class="v" id="sAll">–</span></div>
+  </section>
+
+  <section class="panel" id="optPanel" hidden>
+    <div class="head"><h2 id="optTitle">Prijedlozi</h2></div>
+    <div class="opts" id="opts" role="listbox" aria-labelledby="optTitle"></div>
+    <p class="note" id="optNote" hidden></p>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="head">
+        <h2 id="resTitle">Rezultat</h2>
+        <div class="actions">
+          <button type="button" class="ghost" id="copyList" disabled>Kopiraj brojeve</button>
+          <button type="button" class="ghost" id="copyTable" disabled>Kopiraj za Excel</button>
+          <button type="button" class="ghost" id="download" disabled>Preuzmi .xlsx</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Broj računa</th><th class="c-date">Datum</th><th class="r">Iznos (EUR)</th></tr></thead>
+          <tbody id="resBody"><tr><td colspan="4" class="empty">Učitajte datoteku i kliknite Izračunaj.</td></tr></tbody>
+          <tfoot id="resFoot"></tfoot>
+        </table>
+      </div>
+      <textarea id="copyFallback" class="fallback" hidden aria-label="Tekst za kopiranje"></textarea>
+    </section>
+
+    <section class="panel">
+      <div class="head">
+        <h2>Svi računi</h2>
+        <div class="actions"><button type="button" class="ghost" id="resetAll" disabled>Sve na „Može“</button></div>
+      </div>
+      <div class="filter">
+        <input type="search" id="search" placeholder="Traži broj računa ili iznos" aria-label="Traži račune" disabled>
+      </div>
+      <p class="note tight">Za svaki račun odaberite: <b>Može</b> (alat odlučuje), <b>Uvijek</b> (mora biti u rezultatu) ili <b>Nikad</b> (ne uzima se u obzir).</p>
+      <div class="tbl-wrap">
+        <table class="all">
+          <thead><tr><th>Uzeti</th><th class="c-row">Red</th><th>Broj računa</th><th class="c-date">Datum</th><th class="r">Iznos (EUR)</th></tr></thead>
+          <tbody id="allBody"><tr><td colspan="5" class="empty">Još nema učitanih računa.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <p>Izračun je točan: alat provjerava sve kombinacije i uvijek vraća najbolji mogući zbroj. Samo kod vrlo velikih izvještaja (više od 40 računa i iznosi od nekoliko stotina tisuća eura) daje približno rješenje i to jasno označava.</p>
+  </footer>
+</main>
+</body>
+</html>
