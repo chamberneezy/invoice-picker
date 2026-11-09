@@ -15,7 +15,8 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Playwright's browser builds don't support Ubuntu 26.04 (ubuntu-latest) yet
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
