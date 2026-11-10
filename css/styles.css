@@ -22,12 +22,17 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
   padding: 28px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
 }
 .wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
 h1 { font-size: 1.6rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.top { display: flex; gap: 12px 20px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.top > div { min-width: 0; flex: 1 1 280px; }
+button.danger { border-color: var(--warn); color: var(--fg); flex: none; }
+button.danger:hover { background: var(--accent-soft); }
 .lede { margin: 4px 0 0; color: var(--muted); max-width: 65ch; }
 .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 

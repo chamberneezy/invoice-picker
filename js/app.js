@@ -5,7 +5,6 @@ import {
 
 const SAMPLE_URL = "sample/InvoicesLiqudatedReport-sample.xlsx";
 const SAMPLE_NAME = "InvoicesLiqudatedReport-primjer.xlsx";
-const SETTINGS_KEY = "invoice-picker:settings";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -26,21 +25,12 @@ const state = {
   search: "",
 };
 
-// ---------- settings (per-browser convenience only) ----------
-function loadSettings() {
-  try {
-    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-    if (s.limit) $("limit").value = s.limit;
-    if (s.mode) { const r = document.querySelector(`input[name=mode][value="${s.mode}"]`); if (r) r.checked = true; }
-    if (s.prefer) $("prefer").value = s.prefer;
-    if (s.count) $("count").value = s.count;
-  } catch { /* storage blocked: defaults are fine */ }
-}
-function saveSettings() {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ limit: $("limit").value, mode: mode(), prefer: $("prefer").value, count: $("count").value }));
-  } catch { /* ignore */ }
-}
+// ---------- nothing is stored ----------
+// Medical billing data: files, results and settings live only in memory for this page view.
+// Earlier versions kept settings in localStorage; remove that key if it is still there.
+const LEGACY_SETTINGS_KEY = "invoice-picker:settings";
+try { localStorage.removeItem(LEGACY_SETTINGS_KEY); } catch { /* storage blocked: nothing to remove */ }
+const DEFAULTS = { limit: "1000", mode: "under", prefer: "order", count: "5" };
 const mode = () => document.querySelector("input[name=mode]:checked").value;
 
 // ---------- worker ----------
@@ -56,6 +46,7 @@ function solveAsync(kind, amounts, target, opts) {
   });
 }
 let cancelJob = () => {};
+let resetGen = 0; // bumped by a reset so a run that was in flight drops its result
 
 // ---------- messages ----------
 function say(html, warn = false) {
@@ -102,7 +93,7 @@ async function addFiles(fileList, replace) {
 
 async function loadSample() {
   try {
-    const res = await fetch(SAMPLE_URL);
+    const res = await fetch(SAMPLE_URL, { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
     const wb = readWorkbook(await res.arrayBuffer(), SAMPLE_NAME);
     if (!wb) return;
@@ -221,8 +212,6 @@ async function run(kind = "options") {
   if (target == null) return;
   const p = pool();
   if (!p.length) { say("Nijedan račun nije uključen.", true); return; }
-  saveSettings();
-
   const m = mode();
   const prefer = $("prefer").value;
   const opts = kind === "batches"
@@ -230,9 +219,11 @@ async function run(kind = "options") {
     : { mode: m, prefer, count: +$("count").value, required: p.flatMap((x, i) => (x.use === "always" ? [i] : [])) };
 
   setBusy(true);
+  const gen = resetGen;
   const t0 = performance.now();
   try {
     const r = await solveAsync(kind, p.map((x) => x.cents), target, opts);
+    if (gen !== resetGen) return;
     const ms = performance.now() - t0;
     state.active = 0;
     if (kind === "batches") {
@@ -250,10 +241,11 @@ async function run(kind = "options") {
     }
     showResult();
   } catch (err) {
+    if (gen !== resetGen) return;
     if (err.code === "CANCELLED") say("Izračun je prekinut.", true);
     else say("Izračun nije uspio. Osvježite stranicu i pokušajte ponovno.", true);
   } finally {
-    setBusy(false);
+    if (gen === resetGen) setBusy(false);
   }
 }
 
@@ -510,13 +502,7 @@ $("files").addEventListener("click", (e) => {
   const i = e.target.dataset?.rm;
   if (i == null) return;
   state.files.splice(+i, 1);
-  if (!state.files.length) {
-    state.items = []; state.header = [];
-    $("cols").hidden = true; renderFiles(); clearResult(); renderAll();
-    for (const k of ["run", "batches", "resetAll", "search"]) $(k).disabled = true;
-    say(`Nemate datoteku pri ruci? <button type="button" class="link" id="loadSample">Učitaj primjer</button>`);
-    return;
-  }
+  if (!state.files.length) { resetEverything(false); return; }
   setupColumns();
 });
 $("msg").addEventListener("click", (e) => { if (e.target.id === "loadSample") loadSample(); });
@@ -528,7 +514,7 @@ $("batches").addEventListener("click", () => run("batches"));
 $("cancel").addEventListener("click", () => cancelJob());
 $("limit").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("run").disabled) run("options"); });
 for (const r of document.querySelectorAll("input[name=mode]")) r.addEventListener("change", () => { if (state.items.length) run("options"); });
-for (const k of ["prefer", "count"]) $(k).addEventListener("change", () => { if (state.result) run(state.result.kind); else saveSettings(); });
+for (const k of ["prefer", "count"]) $(k).addEventListener("change", () => { if (state.result) run(state.result.kind); });
 
 $("opts").addEventListener("click", (e) => {
   const b = e.target.closest("[data-k]");
@@ -553,4 +539,37 @@ $("copyList").addEventListener("click", (e) => copy(currentSelection().items.map
 $("copyTable").addEventListener("click", (e) => copy(resultTsv(), e.currentTarget));
 $("download").addEventListener("click", downloadXlsx);
 
-loadSettings();
+
+// ---------- reset ----------
+/** Drop every loaded file, result and setting, as if the page had just been opened. */
+function resetEverything(settingsToo = true) {
+  resetGen++;
+  cancelJob();
+  if (worker) { worker.terminate(); worker = null; }
+  cancelJob = () => {};
+  Object.assign(state, { files: [], sheet: "", header: [], items: [], skipped: [], result: null, active: 0, search: "" });
+  $("file").value = "";
+  $("search").value = "";
+  $("copyFallback").value = "";
+  for (const k of ["colId", "colAmt", "colDate", "sheet"]) $(k).innerHTML = "";
+  $("cols").hidden = true;
+  $("sheetField").hidden = true;
+  if (settingsToo) {
+    $("limit").value = DEFAULTS.limit;
+    document.querySelector(`input[name=mode][value="${DEFAULTS.mode}"]`).checked = true;
+    $("prefer").value = DEFAULTS.prefer;
+    $("count").value = DEFAULTS.count;
+    document.querySelector("details.more").open = false;
+  }
+  renderFiles();
+  clearResult();
+  $("resBody").innerHTML = `<tr><td colspan="4" class="empty">Učitajte datoteku i kliknite Izračunaj.</td></tr>`;
+  renderAll();
+  setBusy(false);
+  for (const k of ["run", "batches", "resetAll", "search"]) $(k).disabled = true;
+  say(`Nemate datoteku pri ruci? <button type="button" class="link" id="loadSample">Učitaj primjer</button>`);
+}
+$("reset").addEventListener("click", () => { resetEverything(); $("file").focus(); });
+// Back/forward cache can restore the page with the old invoices still in memory: start clean instead.
+window.addEventListener("pageshow", (e) => { if (e.persisted) resetEverything(); });
+resetEverything();

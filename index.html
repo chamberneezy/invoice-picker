@@ -15,9 +15,12 @@
 </head>
 <body>
 <main class="wrap">
-  <header>
-    <h1>Odabir računa do limita</h1>
-    <p class="lede">Učitajte izvještaj iz Excela, upišite iznos i alat pronalazi kombinacije računa čiji je zbroj najbliži tom iznosu. Datoteke se obrađuju samo u vašem pregledniku i nigdje se ne šalju.</p>
+  <header class="top">
+    <div>
+      <h1>Odabir računa do limita</h1>
+      <p class="lede">Učitajte izvještaj iz Excela, upišite iznos i alat pronalazi kombinacije računa čiji je zbroj najbliži tom iznosu. Datoteke se obrađuju samo u vašem pregledniku i nigdje se ne šalju ni ne spremaju.</p>
+    </div>
+    <button type="button" class="ghost danger" id="reset" title="Ukloni sve učitane datoteke, rezultate i postavke">Počni ispočetka</button>
   </header>
 
   <section class="panel" aria-labelledby="h-data">
@@ -48,9 +51,9 @@
       <fieldset class="field seg-field">
         <legend class="label">Zbroj računa mora biti</legend>
         <div class="seg" role="radiogroup">
-          <label><input type="radio" name="mode" value="under" checked><span>do iznosa</span></label>
-          <label><input type="radio" name="mode" value="closest"><span>najbliži iznosu</span></label>
-          <label><input type="radio" name="mode" value="over"><span>barem iznos</span></label>
+          <label><input type="radio" name="mode" value="under" checked autocomplete="off"><span>do iznosa</span></label>
+          <label><input type="radio" name="mode" value="closest" autocomplete="off"><span>najbliži iznosu</span></label>
+          <label><input type="radio" name="mode" value="over" autocomplete="off"><span>barem iznos</span></label>
         </div>
       </fieldset>
     </div>
@@ -59,7 +62,7 @@
       <div class="cols">
         <div class="field">
           <label for="prefer">Kad više kombinacija daje isti zbroj</label>
-          <select id="prefer">
+          <select id="prefer" autocomplete="off">
             <option value="order">uzmi starije račune</option>
             <option value="fewest">uzmi što manje računa</option>
             <option value="most">uzmi što više računa</option>
@@ -67,7 +70,7 @@
         </div>
         <div class="field">
           <label for="count">Broj prijedloga</label>
-          <select id="count">
+          <select id="count" autocomplete="off">
             <option value="1">1</option>
             <option value="3">3</option>
             <option value="5" selected>5</option>
@@ -123,7 +126,7 @@
         <div class="actions"><button type="button" class="ghost" id="resetAll" disabled>Sve na „Može“</button></div>
       </div>
       <div class="filter">
-        <input type="search" id="search" placeholder="Traži broj računa ili iznos" aria-label="Traži račune" disabled>
+        <input type="search" id="search" placeholder="Traži broj računa ili iznos" aria-label="Traži račune" autocomplete="off" disabled>
       </div>
       <p class="note tight">Za svaki račun odaberite: <b>Može</b> (alat odlučuje), <b>Uvijek</b> (mora biti u rezultatu) ili <b>Nikad</b> (ne uzima se u obzir).</p>
       <div class="tbl-wrap">

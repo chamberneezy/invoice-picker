@@ -19,9 +19,9 @@ The original request is in `docs/original-request.png` (a chat in Croatian/Kajka
   - forced invoices via `required`.
   The strategy is picked automatically: DP, complement DP, meet-in-the-middle for 40 or fewer invoices, or a flagged approximation. `splitBatches()` does repeated batches. `solve()` keeps the v1 API.
 - `js/parse.js` handles amounts in every common locale (with a per-column decimal-separator hint), dates (Croatian, ISO, Excel serial), header-row detection, column guessing from header names *and* cell contents, dropping a trailing total row, and duplicate detection.
-- `js/app.js` covers several files, a sheet picker, Datum column, Može/Uvijek/Nikad per invoice, an options list, batches, a cancel button for long runs, and an `.xlsx` export with all original columns.
+- `js/app.js` covers a **Počni ispočetka** reset button (clears files, results and settings and stops any running calculation; it also runs when the browser restores the page from the back/forward cache), several files, a sheet picker, Datum column, Može/Uvijek/Nikad per invoice, an options list, batches, a cancel button for long runs, and an `.xlsx` export with all original columns.
 - SheetJS 0.20.3 is vendored in `js/vendor/` (sha256 `cc015130…3a6f41`). There are no external requests, and the CSP is `default-src 'self'`.
-- `npm test` runs 38 unit tests, including brute-force cross-checks of every mode, tie-break and strategy. `npm run test:e2e` runs 9 Playwright scenarios on desktop and a 390 px phone (18 runs).
+- `npm test` runs 38 unit tests, including brute-force cross-checks of every mode, tie-break and strategy. `npm run test:e2e` runs 10 Playwright scenarios on desktop and a 390 px phone (20 runs).
 
 Real report columns: `Tip računa, Vrsta obveze, Datum primitka, Šifra ustanove, Naziv ustanove, Medicinska djelatnost, Status, Broj računa HZZO:, Broj računa - ZU:, Broj eRačuna OZO, Broj eRačuna DZO, Ukupan iznos, Urudžbeni broj, Status prebacivanja:`. In the export, amounts are **text** such as `"26.60"`.
 
@@ -31,6 +31,7 @@ Real report columns: `Tip računa, Vrsta obveze, Datum primitka, Šifra ustanove
 - Money is always integer cents internally. Never sum floats.
 - Keep `solver.js` and `parse.js` pure, with no DOM, so they stay testable in Node.
 - Files must never leave the user's browser unless the owner explicitly decides otherwise. The data is medical billing.
+- Nothing is persisted. No localStorage, sessionStorage, IndexedDB or service worker: everything lives in memory for one page view. The owner asked for this. (An old `invoice-picker:settings` localStorage key is deleted on load.)
 
 ## Done from the v1 roadmap
 
@@ -42,7 +43,7 @@ tie-break (default: older invoices first), batches, the Datum column in the resu
 - Is "older invoices first" the right default tie-break?
 - Should batches honour *Uvijek* (put forced invoices into batch 1)? Right now they are ignored for batches.
 - Custom domain, and whether access needs to be restricted (no data is uploaded either way).
-- Optional PWA (manifest plus service worker) for offline use.
+- Optional PWA for offline use. This conflicts with the no-caching request, so ask the owner first.
 
 ## Commands
 

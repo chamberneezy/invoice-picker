@@ -153,3 +153,33 @@ test("large report stays responsive", async ({ page }) => {
   await setLimit(page, "25.000,00");
   await expect(page.locator("#sSum")).toHaveText("25.000,00", { timeout: 20_000 });
 });
+
+test("reset clears files, results and settings; nothing is stored", async ({ page }) => {
+  await page.setInputFiles("#file", "sample/InvoicesLiqudatedReport-sample.xlsx");
+  await expect(page.locator("#msg")).toContainText("Učitano 11 računa");
+  await page.click("label:has(input[value=closest])");
+  await setLimit(page, "190");
+  await expect(page.locator("#sSum")).not.toHaveText("–");
+
+  await page.click("#reset");
+  await expect(page.locator("#files")).toBeHidden();
+  await expect(page.locator("#cols")).toBeHidden();
+  await expect(page.locator("#sSum")).toHaveText("–");
+  await expect(page.locator("#allBody")).toContainText("Još nema učitanih računa.");
+  await expect(page.locator("#run")).toBeDisabled();
+  await expect(page.locator("#limit")).toHaveValue("1000");
+  await expect(page.locator("input[value=under]")).toBeChecked();
+  await expect(page.locator("#loadSample")).toBeVisible();
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+
+  // the same file can be loaded again straight after a reset
+  await page.setInputFiles("#file", "sample/InvoicesLiqudatedReport-sample.xlsx");
+  await expect(page.locator("#msg")).toContainText("Učitano 11 računa");
+  await setLimit(page, "190");
+  await expect(page.locator("#sSum")).toHaveText("186,20");
+
+  // a reload starts empty too
+  await page.reload();
+  await expect(page.locator("#limit")).toHaveValue("1000");
+  await expect(page.locator("#files")).toBeHidden();
+});
