@@ -49,7 +49,7 @@ label, .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
 .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
 .drop span { min-width: 0; color: var(--muted); }
 .drop b { color: var(--accent); font-weight: 600; flex: none; }
-input[type="text"], input[type="search"], select {
+input[type="text"], input[type="search"], input[type="password"], select {
   font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
   padding: 9px 12px; min-height: 44px; width: 100%;
 }
@@ -155,3 +155,10 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent);
   .seg label + label { border-left: 0; border-top: 1px solid var(--line); }
   .seg span { min-height: 40px; }
 }
+
+/* password gate */
+.gate { min-height: 70vh; display: grid; place-items: center; }
+.gate-box { width: 100%; max-width: 380px; display: grid; gap: 14px; }
+.gate-box h1 { font-size: 1.35rem; }
+.gate-box .lede { margin: -8px 0 0; }
+.gate-box .note { margin: 0; }

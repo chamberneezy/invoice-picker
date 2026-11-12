@@ -1,12 +1,30 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
+import crypto from "node:crypto";
+
+// The real password is not in the repo: tests swap in the hash of a test-only password.
+const TEST_PASSWORD = "test-lozinka";
+const TEST_HASH = (() => {
+  const salt = crypto.randomBytes(16), iterations = 1000;
+  const hash = crypto.pbkdf2Sync(TEST_PASSWORD, salt, iterations, 32, "sha256");
+  return `export default ${JSON.stringify({ salt: salt.toString("base64"), iterations, hash: hash.toString("base64") })};`;
+})();
+
+async function login(page, pw = TEST_PASSWORD) {
+  await page.fill("#pw", pw);
+  await page.click("#pwGo");
+}
 
 const errors = [];
 test.beforeEach(async ({ page }) => {
   errors.length = 0;
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+  await page.route("**/js/auth-hash.js", (r) => r.fulfill({ contentType: "text/javascript", body: TEST_HASH }));
   await page.goto("/");
+  if (test.info().title.startsWith("gate:")) return;
+  await login(page);
+  await expect(page.locator("#app")).toBeVisible();
 });
 test.afterEach(async ({ page }) => {
   expect(errors, "no console errors / CSP violations").toEqual([]);
@@ -178,8 +196,30 @@ test("reset clears files, results and settings; nothing is stored", async ({ pag
   await setLimit(page, "190");
   await expect(page.locator("#sSum")).toHaveText("186,20");
 
-  // a reload starts empty too
+  // a reload starts empty too (and asks for the password again)
   await page.reload();
+  await expect(page.locator("#app")).toBeHidden();
+  await login(page);
   await expect(page.locator("#limit")).toHaveValue("1000");
   await expect(page.locator("#files")).toBeHidden();
+});
+
+test("gate: the tool stays hidden until the right password is entered", async ({ page }) => {
+  await expect(page.locator("#gate")).toBeVisible();
+  await expect(page.locator("#app")).toBeHidden();
+  await expect(page.locator("#pw")).toBeFocused();
+
+  await login(page, "pogresno");
+  await expect(page.locator("#pwMsg")).toHaveText("Pogrešna lozinka.");
+  await expect(page.locator("#app")).toBeHidden();
+
+  await login(page);
+  await expect(page.locator("#app")).toBeVisible();
+  await expect(page.locator("#gate")).toBeHidden();
+  await expect(page.locator("#pw")).toHaveValue("");
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+
+  await page.reload();
+  await expect(page.locator("#app")).toBeHidden();
+  await expect(page.locator("#gate")).toBeVisible();
 });

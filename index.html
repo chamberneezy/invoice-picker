@@ -5,16 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
   <title>Odabir računa do limita</title>
   <meta name="description" content="Učitajte Excel izvještaj računa i pronađite kombinacije računa čiji je zbroj najbliži zadanom iznosu.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d5d8a'/%3E%3Cpath d='M9 8h14M9 13h14M9 18h8' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M19 22l2.5 2.5L26 20' stroke='%238fd6a6' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
   <!-- SheetJS 0.20.3 (vendored from cdn.sheetjs.com) reads and writes .xlsx/.xls/.csv in the browser -->
   <script src="js/vendor/xlsx.full.min.js" defer></script>
+  <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-<main class="wrap">
+<div class="gate" id="gate">
+  <form class="panel gate-box" id="gateForm" novalidate>
+    <h1>Odabir računa do limita</h1>
+    <p class="lede">Unesite lozinku za pristup.</p>
+    <input type="text" name="username" autocomplete="username" value="ordinacija" hidden>
+    <div class="field">
+      <label for="pw">Lozinka</label>
+      <input type="password" id="pw" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" required>
+    </div>
+    <button type="submit" id="pwGo">Prijava</button>
+    <p class="note warn" id="pwMsg" role="alert" hidden></p>
+  </form>
+</div>
+<main class="wrap" id="app" hidden>
   <header class="top">
     <div>
       <h1>Odabir računa do limita</h1>
